@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive Molecule Visualization</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+  <script>
+    // Create a scene
+    const scene = new THREE.Scene();
+
+    // Create a camera
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+
+    // Create a renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Load the .xyz file
+    const loader = new THREE.FileLoader();
+    loader.load(
+      'https://github.com/Guygaal/webpages/blob/main/PC60BM.xyz',
+      (data) => {
+        // Parse the .xyz data
+        const moleculeData = parseXYZ(data);
+
+        // Create geometries and materials for each atom
+        const geometries = [];
+        const materials = [];
+        moleculeData.atoms.forEach((atom) => {
+          const geometry = new THREE.SphereGeometry(atom.radius, 32, 32);
+          geometries.push(geometry);
+
+          const material = new THREE.MeshBasicMaterial({ color: atom.color });
+          materials.push(material);
+        });
+
+        // Create mesh for each atom
+        const meshes = [];
+        moleculeData.positions.forEach((position, index) => {
+          const mesh = new THREE.Mesh(geometries[index], materials[index]);
+          mesh.position.set(position.x, position.y, position.z);
+          scene.add(mesh);
+          meshes.push(mesh);
+        });
+
+        // Animation loop
+        function animate() {
+          requestAnimationFrame(animate);
+          meshes.forEach((mesh) => {
+            mesh.rotation.x += 0.01;
+            mesh.rotation.y += 0.01;
+          });
+          renderer.render(scene, camera);
+        }
+        animate();
+      },
+      undefined,
+      (error) => {
+        console.error('Failed to load molecule.xyz', error);
+      }
+    );
+
+    // Parse the .xyz data
+    function parseXYZ(data) {
+      const lines = data.split('\n').filter(Boolean);
+      const atomCount = parseInt(lines[0]);
+
+      const atoms = [];
+      const positions = [];
+
+      for (let i = 2; i < atomCount + 2; i++) {
+        const lineData = lines[i].split(/\s+/);
+        const atomSymbol = lineData[0];
+        const x = parseFloat(lineData[1]);
+        const y = parseFloat(lineData[2]);
+        const z = parseFloat(lineData[3]);
+
+        atoms.push({ symbol: atomSymbol });
+        positions.push({ x: x, y: y, z: z });
+      }
+
+      // Define atom properties (radius, color) based on the atom symbol
+      const atomProperties = {
+        H: { radius: 0.3, color: 0xffffff },   // Example properties, modify as needed
+        O: { radius: 0.5, color: 0xff0000 },   // Example properties, modify as needed
+        C: { radius: 0.6, color: 0x00ff00 }    // Example properties, modify as needed
+      };
+
+      atoms.forEach((atom) => {
+        const symbol = atom.symbol;
+        atom.radius = atomProperties[symbol].radius;
+        atom.color = atomProperties[symbol].color;
+      });
+
+      return { atoms, positions };
+    }
+  </script>
+</body>
+</html>
